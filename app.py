@@ -37,30 +37,30 @@ def encode_text(file_content, secret_text, secret_key):
     try:
         # Encrypt the secret text
         iv, encrypted_message = encrypt_message(secret_text, secret_key)
-
-        # Embed the encrypted message and IV in the file
-        encoded_data = file_content + f"\n<!--IV:{iv}::MESSAGE:{encrypted_message}-->"
+        
+        # Combine IV and encrypted message
+        hidden_data = f"{iv}::{encrypted_message}"
+        
+        # Convert hidden data to invisible characters
+        invisible_data = ''.join(chr(0x200B) + char for char in hidden_data)  # Zero-width space prefix
+        
+        # Append invisible characters to the file content
+        encoded_data = file_content + invisible_data
         return encoded_data
     except Exception as e:
         raise Exception(f"Error during encoding: {str(e)}")
 
+
 def decode_text(file_content, secret_key):
     try:
-        # Extract the IV and encrypted message from the file
-        marker_iv = "IV:"
-        marker_message = "::MESSAGE:"
-        start_iv = file_content.find(marker_iv)
-        start_message = file_content.find(marker_message)
+        # Extract hidden data (invisible characters)
+        hidden_data = ''.join(char for char in file_content if char == chr(0x200B) or ord(char) > 0x200B)
+        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))  # Remove zero-width spaces
         
-        if start_iv == -1 or start_message == -1:
+        # Split into IV and encrypted message
+        if "::" not in visible_data:
             raise ValueError("No encoded message found!")
-        
-        end_marker = file_content.find("-->", start_message)
-        if end_marker == -1:
-            raise ValueError("Corrupted encoded message!")
-        
-        iv = file_content[start_iv + len(marker_iv):start_message].strip()
-        encrypted_message = file_content[start_message + len(marker_message):end_marker].strip()
+        iv, encrypted_message = visible_data.split("::", 1)
         
         # Decrypt the message
         try:
@@ -70,6 +70,7 @@ def decode_text(file_content, secret_key):
             raise ValueError("Wrong secret key!")
     except Exception as e:
         raise Exception(f"Error during decoding: {str(e)}")
+
 
 
 # Streamlit app
