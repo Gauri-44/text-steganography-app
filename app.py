@@ -6,63 +6,40 @@ from base64 import b64encode, b64decode
 
 # Helper functions for encryption and decryption
 def encrypt_message(secret_message, secret_key):
-    # Convert key and message to bytes
-    key = secret_key.encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
-    message = secret_message.encode('utf-8')
-
-    # Generate a random initialization vector (IV)
+    key = secret_key.strip().encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
+    message = secret_message.strip().encode('utf-8')
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(message) + encryptor.finalize()
-
-    # Return IV and encrypted message as base64-encoded strings
     return b64encode(iv).decode('utf-8'), b64encode(ciphertext).decode('utf-8')
 
 def decrypt_message(iv, ciphertext, secret_key):
-    # Convert key, IV, and ciphertext to bytes
-    key = secret_key.encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
+    key = secret_key.strip().encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
     iv = b64decode(iv)
     ciphertext = b64decode(ciphertext)
-
-    # Decrypt the message
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-
     return plaintext.decode('utf-8')
 
-# Encoding and decoding functions with encryption/decryption
+# Encoding and decoding functions
 def encode_text(file_content, secret_text, secret_key):
     try:
-        # Encrypt the secret text
         iv, encrypted_message = encrypt_message(secret_text, secret_key)
-        
-        # Combine IV and encrypted message
         hidden_data = f"{iv}::{encrypted_message}"
-        
-        # Convert hidden data to invisible characters
-        invisible_data = ''.join(chr(0x200B) + char for char in hidden_data)  # Zero-width space prefix
-        
-        # Append invisible characters to the file content
-        encoded_data = file_content + invisible_data
-        return encoded_data
+        invisible_data = ''.join(chr(0x200B) + char for char in hidden_data)
+        return file_content + invisible_data
     except Exception as e:
         raise Exception(f"Error during encoding: {str(e)}")
 
-
 def decode_text(file_content, secret_key):
     try:
-        # Extract hidden data (invisible characters)
         hidden_data = ''.join(char for char in file_content if char == chr(0x200B) or ord(char) > 0x200B)
-        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))  # Remove zero-width spaces
-        
-        # Split into IV and encrypted message
+        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))
         if "::" not in visible_data:
             raise ValueError("No encoded message found!")
         iv, encrypted_message = visible_data.split("::", 1)
-        
-        # Decrypt the message
         try:
             secret_text = decrypt_message(iv, encrypted_message, secret_key)
             return secret_text
@@ -70,8 +47,6 @@ def decode_text(file_content, secret_key):
             raise ValueError("Wrong secret key!")
     except Exception as e:
         raise Exception(f"Error during decoding: {str(e)}")
-
-
 
 # Streamlit app
 def main():
@@ -91,8 +66,6 @@ def main():
                 try:
                     file_content = uploaded_file.read().decode("utf-8")
                     encoded_data = encode_text(file_content, secret_text, secret_key)
-
-                    # Save the encoded file
                     encoded_file_name = uploaded_file.name.replace(".txt", "_encoded.txt")
                     st.download_button(
                         label="Download Encoded File",
@@ -100,7 +73,7 @@ def main():
                         file_name=encoded_file_name,
                         mime="text/plain",
                     )
-                    st.success(f"File encoded successfully! Download your file using the button above.")
+                    st.success("File encoded successfully! Download your file using the button above.")
                 except Exception as e:
                     st.error(f"Error: {str(e)}")
 
@@ -116,8 +89,6 @@ def main():
                     file_content = uploaded_file.read().decode("utf-8")
                     secret_text = decode_text(file_content, secret_key)
                     st.success(f"Decoded Secret Message: {secret_text}")
-
-                    # Save the decoded message
                     decoded_file_name = "decoded_message.txt"
                     st.download_button(
                         label="Download Decoded Message",
@@ -126,7 +97,10 @@ def main():
                         mime="text/plain",
                     )
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    if "Wrong secret key!" in str(e):
+                        st.error("❌ Wrong Secret Key! Please try again.")
+                    else:
+                        st.error(f"Error: {str(e)}")
 
 if __name__ == "__main__":
     main()
