@@ -6,45 +6,62 @@ from base64 import b64encode, b64decode
 
 # Helper functions for encryption and decryption
 def encrypt_message(secret_message, secret_key):
+    # Convert key and message to bytes
     key = secret_key.encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
     message = secret_message.encode('utf-8')
+
+    # Generate a random initialization vector (IV)
     iv = os.urandom(16)
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(message) + encryptor.finalize()
+
+    # Return IV and encrypted message as base64-encoded strings
     return b64encode(iv).decode('utf-8'), b64encode(ciphertext).decode('utf-8')
 
 def decrypt_message(iv, ciphertext, secret_key):
+    # Convert key, IV, and ciphertext to bytes
     key = secret_key.encode('utf-8').ljust(32)[:32]  # Ensure 32-byte key
     iv = b64decode(iv)
     ciphertext = b64decode(ciphertext)
+
+    # Decrypt the message
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+
     return plaintext.decode('utf-8')
 
+# Encoding and decoding functions with encryption/decryption
 def encode_text(file_content, secret_text, secret_key):
     try:
+        # Encrypt the secret text
         iv, encrypted_message = encrypt_message(secret_text, secret_key)
-        hidden_data = f"{iv}::{encrypted_message}"
-        
-        # Embed the hidden data using Zero-Width Characters
-        invisible_data = ''.join(chr(0x200B) + char for char in hidden_data)  # Zero-width space prefix
-        encoded_data = file_content + invisible_data
+
+        # Embed the encrypted message and IV in the file
+        encoded_data = file_content + f"\n<!--IV:{iv}::MESSAGE:{encrypted_message}-->"
         return encoded_data
     except Exception as e:
         raise Exception(f"Error during encoding: {str(e)}")
 
 def decode_text(file_content, secret_key):
     try:
-        # Extract hidden data using Zero-Width Characters
-        hidden_data = ''.join(char for char in file_content if ord(char) > 0x200B)
-        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))  # Remove zero-width spaces
-        
-        if "::" not in visible_data:
+        # Extract the IV and encrypted message from the file
+        marker_iv = "IV:"
+        marker_message = "::MESSAGE:"
+        start_iv = file_content.find(marker_iv)
+        start_message = file_content.find(marker_message)
+
+        if start_iv == -1 or start_message == -1:
             raise ValueError("No encoded message found!")
-        iv, encrypted_message = visible_data.split("::", 1)
-        
+
+        end_marker = file_content.find("-->", start_message)
+        if end_marker == -1:
+            raise ValueError("Corrupted encoded message!")
+
+        iv = file_content[start_iv + len(marker_iv):start_message].strip()
+        encrypted_message = file_content[start_message + len(marker_message):end_marker].strip()
+
         # Decrypt the message
         secret_text = decrypt_message(iv, encrypted_message, secret_key)
         return secret_text
@@ -60,7 +77,7 @@ def main():
     if app_mode == "Encode":
         st.header("Encode Secret Message into Text File")
         uploaded_file = st.file_uploader("Upload Text File", type="txt")
-        secret_text = st.text_input("Enter Secret Text to Hide", type="txt")
+        secret_text = st.text_area("Enter Secret Text to Hide")
         secret_key = st.text_input("Enter Secret Key (for encryption)", type="password")
         if st.button("Encode"):
             if not uploaded_file or not secret_text or not secret_key:
