@@ -51,7 +51,7 @@ def decode_text(file_content, secret_key):
 # Streamlit app
 def main():
     # App title and description
-    st.markdown("<h1 style='text-align: center; color: #4CAF50;'>Text Steganography Tool</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: black;'>Text Steganography Tool</h1>", unsafe_allow_html=True)
     st.markdown("<h4 style='text-align: center; color: gray;'>Hide and reveal secret messages securely!</h4>", unsafe_allow_html=True)
     
     # Sidebar for navigation
@@ -59,11 +59,10 @@ def main():
     app_mode = st.sidebar.radio("Choose a mode:", ["Encode", "Decode"])
 
     if app_mode == "Encode":
-        st.markdown("### 🔒 Encode Secret Message into Text File")
-        uploaded_file = st.file_uploader("📂 Upload Text File", type="txt")
+        uploaded_file = st.file_uploader(" Upload Text File", type="txt")
         secret_text = st.text_input("🔏 Enter Secret Text to Hide", type="password")
         secret_key = st.text_input("🔑 Enter Secret Key (for encryption)", type="password")
-        if st.button("🔐 Encode Message"):
+        if st.button("Encode Message"):
             if not uploaded_file or not secret_text or not secret_key:
                 st.warning("⚠️ Please fill in all fields!")
             else:
@@ -86,9 +85,9 @@ def main():
 
     elif app_mode == "Decode":
         st.markdown("### 🔓 Decode Secret Message from Text File")
-        uploaded_file = st.file_uploader("📂 Upload Encoded Text File", type="txt")
+        uploaded_file = st.file_uploader("Upload Encoded Text File", type="txt")
         secret_key = st.text_input("🔑 Enter Secret Key (for decryption)", type="password")
-        if st.button("🔓 Decode Message"):
+        if st.button(" Decode Message"):
             if not uploaded_file or not secret_key:
                 st.warning("⚠️ Please fill in all fields!")
             else:
@@ -112,16 +111,7 @@ def main():
                         else:
                             st.error(f"Error: {str(e)}")
 
-    # Footer
-    st.markdown(
-        """
-        <footer style='text-align: center; margin-top: 50px;'>
-            <hr>
-            <p style='font-size: small;'>Built with ❤️ using Streamlit</p>
-        </footer>
-        """,
-        unsafe_allow_html=True,
-    )
+
 
 if __name__ == "__main__":
     main()
