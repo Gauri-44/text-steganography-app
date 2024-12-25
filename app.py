@@ -35,11 +35,17 @@ def encode_text(file_content, secret_text, secret_key):
 
 def decode_text(file_content, secret_key):
     try:
-        hidden_data = ''.join(char for char in file_content if char == chr(0x200B) or ord(char) > 0x200B)
-        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))
-        if "::" not in visible_data:
+        # Extract hidden data (invisible characters)
+        hidden_data = ''.join(char for char in file_content if ord(char) > 0x200B)
+        visible_data = ''.join(char for char in hidden_data if char != chr(0x200B))  # Remove zero-width spaces
+
+        # Split into IV and encrypted message
+        if "::" not in visible_data or not visible_data.strip():
             raise ValueError("No encoded message found!")
+        
         iv, encrypted_message = visible_data.split("::", 1)
+
+        # Decrypt the message
         try:
             secret_text = decrypt_message(iv, encrypted_message, secret_key)
             return secret_text
@@ -47,6 +53,7 @@ def decode_text(file_content, secret_key):
             raise ValueError("Wrong secret key!")
     except Exception as e:
         raise Exception(f"Error during decoding: {str(e)}")
+
 
 # Streamlit app
 def main():
