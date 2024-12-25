@@ -60,7 +60,7 @@ def main():
     if app_mode == "Encode":
         st.header("Encode Secret Message into Text File")
         uploaded_file = st.file_uploader("Upload Text File", type="txt")
-        secret_text = st.text_input("Enter Secret Text to Hide", type="password")
+        secret_text = st.text_input("Enter Secret Text to Hide", type="txt")
         secret_key = st.text_input("Enter Secret Key (for encryption)", type="password")
         if st.button("Encode"):
             if not uploaded_file or not secret_text or not secret_key:
